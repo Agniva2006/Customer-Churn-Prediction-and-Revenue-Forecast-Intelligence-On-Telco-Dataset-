@@ -1,6 +1,16 @@
 # 📊 Telecom Customer Churn & Revenue Forecast Intelligence System
 
 ---
+<img width="583" height="457" alt="image" src="https://github.com/user-attachments/assets/080c090b-d899-470a-9184-694df9f8956d" />
+<img width="707" height="473" alt="image" src="https://github.com/user-attachments/assets/f4febba9-5e27-4c73-8afc-ed9f2b9886b1" />
+<img width="575" height="457" alt="image" src="https://github.com/user-attachments/assets/773f8896-5973-4bae-a245-2b496e13f4f7" />
+<img width="576" height="455" alt="image" src="https://github.com/user-attachments/assets/6bb190bf-434a-4627-8b10-af43fd553fab" />
+<img width="567" height="455" alt="image" src="https://github.com/user-attachments/assets/da543890-8f75-4e04-a93f-90fa33f40e5e" />
+<img width="560" height="435" alt="image" src="https://github.com/user-attachments/assets/6b260b64-fa7f-4baa-97e2-e1a6e6acf933" />
+<img width="575" height="413" alt="image" src="https://github.com/user-attachments/assets/cba2faea-3d7e-41f8-94af-bd4fc962ecc8" />
+<img width="569" height="435" alt="image" src="https://github.com/user-attachments/assets/48985023-b98d-424d-b057-407781f699a9" />
+<img width="578" height="413" alt="image" src="https://github.com/user-attachments/assets/9740901d-6bb5-4392-b676-0b0169bf4ef4" />
+<img width="543" height="435" alt="image" src="https://github.com/user-attachments/assets/bf5960f0-d6d7-42e1-9c5f-755db91d64bf" />
 
 ## 🏢 Business Problem
 
