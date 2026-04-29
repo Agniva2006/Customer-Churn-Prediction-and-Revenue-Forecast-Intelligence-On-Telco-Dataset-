@@ -1,23 +1,25 @@
 import pandas as pd
 
-
-def load_data(path: str) -> pd.DataFrame:
-    return pd.read_csv(path)
-
-
-def clean_data(df: pd.DataFrame) -> pd.DataFrame:
-    df = df.copy()
-
-    # Clean TotalCharges
+def create_features(df):
+    
+    # --- Cleaning ---
+    df["tenure"] = df["tenure"].astype(int)
     df["TotalCharges"] = pd.to_numeric(df["TotalCharges"], errors="coerce")
-    df["TotalCharges"] = df["TotalCharges"].fillna(0)
-
-    # Clean target
-    df["Churn"] = df["Churn"].str.strip()
-    df["Churn"] = df["Churn"].map({"Yes": 1, "No": 0})
-
+    
+    # --- Tenure Group ---
+    df["tenure_group"] = pd.cut(
+        df["tenure"],
+        bins=[0, 12, 24, 48, 72],
+        labels=["0-12", "12-24", "24-48", "48+"]
+    )
+    
+    # --- Service Count ---
+    services = [
+        "PhoneService", "OnlineSecurity", "OnlineBackup",
+        "DeviceProtection", "TechSupport",
+        "StreamingTV", "StreamingMovies"
+    ]
+    
+    df["service_count"] = (df[services] == "Yes").sum(axis=1)
+    
     return df
-
-
-def save_processed(df: pd.DataFrame, path: str):
-    df.to_csv(path, index=False)
