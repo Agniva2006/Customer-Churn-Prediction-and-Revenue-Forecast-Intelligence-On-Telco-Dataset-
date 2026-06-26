@@ -5,7 +5,6 @@ both single predictions and batch CSV uploads.
 """
 
 import os
-import sys
 
 import joblib
 import pandas as pd
