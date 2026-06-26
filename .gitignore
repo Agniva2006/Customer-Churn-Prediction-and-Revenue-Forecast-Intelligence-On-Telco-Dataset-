@@ -1,6 +1,29 @@
-data/processed/
-*.pkl
+# Python
 __pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Jupyter
 .ipynb_checkpoints/
-data/
-*.csv
+
+# Environment
+.env
+venv/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Processed data (regenerable)
+data/processed/
+
+# Logs
+logs/
