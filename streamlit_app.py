@@ -1,208 +1,250 @@
-"""Streamlit frontend for the Telecom Churn Prediction API."""
+"""Streamlit frontend for the Telecom Churn & Revenue Intelligence API v3.0."""
 
 import streamlit as st
 import requests
+import pandas as pd
 
 API_URL = "http://127.0.0.1:8000"
 
 st.set_page_config(
-    page_title="Telecom Churn Intelligence",
+    page_title="Telecom Churn & Revenue Intelligence",
     page_icon="📊",
     layout="wide",
+    initial_sidebar_state="expanded",
 )
 
-# ── Custom CSS ─────────────────────────────────────────────
+# ── Glassmorphism & Custom Design System ───────────────────
 st.markdown("""
 <style>
     .main-header {
         text-align: center;
-        padding: 1rem 0 0.5rem;
+        padding: 1.5rem 0 1rem;
+        background: linear-gradient(135deg, #1e1e2f 0%, #0f172a 100%);
+        border-radius: 16px;
+        color: white;
+        margin-bottom: 1.5rem;
     }
     .metric-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        border: 1px solid #334155;
         border-radius: 16px;
-        padding: 1.5rem;
+        padding: 1.25rem;
         color: white;
         text-align: center;
-        margin-bottom: 1rem;
-        box-shadow: 0 4px 15px rgba(102,126,234,0.3);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
     }
-    .metric-card h2 {
+    .metric-card h3 {
         margin: 0;
-        font-size: 2.2rem;
+        font-size: 2rem;
+        font-weight: 700;
     }
     .metric-card p {
-        margin: 0.3rem 0 0;
-        opacity: 0.85;
-        font-size: 0.95rem;
+        margin: 0.4rem 0 0;
+        color: #94a3b8;
+        font-size: 0.9rem;
     }
-    .risk-high {
-        background: linear-gradient(135deg, #f5365c 0%, #f56036 100%) !important;
-    }
-    .risk-medium {
-        background: linear-gradient(135deg, #fb6340 0%, #fbb140 100%) !important;
-    }
-    .risk-low {
-        background: linear-gradient(135deg, #2dce89 0%, #2dcecc 100%) !important;
-    }
-    div[data-testid="stExpander"] {
-        border: 1px solid #e0e0e0;
+    .risk-high { border-left: 6px solid #ef4444 !important; }
+    .risk-medium { border-left: 6px solid #f59e0b !important; }
+    .risk-low { border-left: 6px solid #10b981 !important; }
+
+    .driver-card {
+        background: #1e293b;
         border-radius: 12px;
+        padding: 0.85rem 1rem;
         margin-bottom: 0.5rem;
+        border-left: 4px solid #6366f1;
+        color: #f8fafc;
+    }
+    .action-box {
+        background: linear-gradient(135deg, #312e81 0%, #1e1b4b 100%);
+        border: 1px solid #6366f1;
+        border-radius: 14px;
+        padding: 1.25rem;
+        color: #e0e7ff;
+        margin-top: 1rem;
     }
 </style>
 """, unsafe_allow_html=True)
 
 # ── Header ─────────────────────────────────────────────────
-st.markdown('<div class="main-header">', unsafe_allow_html=True)
-st.title("📊 Telecom Churn Intelligence System")
-st.caption("Predict customer churn · Optimise retention · Maximise profit")
-st.markdown('</div>', unsafe_allow_html=True)
+st.markdown("""
+<div class="main-header">
+    <h1>📊 Telecom Churn & Revenue Intelligence Platform</h1>
+    <p>Predictive Churn Risk · SHAP Explainability · CLV Action Matrix · Profit Optimization</p>
+</div>
+""", unsafe_allow_html=True)
 
-st.divider()
-
-# ── Sidebar: API health ───────────────────────────────────
+# ── Sidebar: System Health Probe ───────────────────────────
 with st.sidebar:
-    st.header("⚙️ System Status")
+    st.header("⚙️ MLOps System Health")
     try:
-        health = requests.get(f"{API_URL}/health", timeout=3).json()
-        if health.get("model_loaded"):
-            st.success("🟢 API Online · Model Loaded")
+        health_res = requests.get(f"{API_URL}/health", timeout=3)
+        if health_res.status_code == 200:
+            h_json = health_res.json()
+            if h_json.get("model_loaded"):
+                st.success("🟢 API Online · Model Pipeline Ready")
+            else:
+                st.warning("🟡 API Online · Model Pipeline NOT Loaded")
         else:
-            st.warning("🟡 API Online · Model NOT loaded")
+            st.error("🔴 API Degraded")
     except Exception:
-        st.error("🔴 API Offline")
-        st.info("Start the API with:\n```\nuvicorn api:app --reload\n```")
+        st.error("🔴 API Server Offline")
+        st.info("Launch API via terminal:\n```bash\nuvicorn api:app --reload\n```")
 
     st.divider()
-    st.header("ℹ️ About")
-    st.markdown(
-        "This system predicts whether a telecom customer is likely to churn "
-        "and recommends a **profit-optimised retention action**.\n\n"
-        "**Model:** XGBoost (calibrated)  \n"
-        "**Threshold:** 0.15 (profit-optimised)  \n"
-        "**Dataset:** Telco Customer Churn (7,043 records)"
-    )
+    st.header("🎯 Business Parameters")
+    retention_threshold = st.slider("Classification Threshold", 0.05, 0.50, 0.15, 0.01,
+                                    help="Optimized profit threshold (Default 0.15)")
+    st.caption("Lower threshold prioritizes retention capture for high-value customers.")
 
-# ── Input Form ─────────────────────────────────────────────
-st.subheader("🔎 Customer Profile")
+# ── Form Inputs ────────────────────────────────────────────
+st.subheader("👤 Customer Profile Input")
 
-col1, col2, col3 = st.columns(3)
+tab_input, tab_batch_ui = st.tabs(["🔎 Single Prediction", "📁 Batch CSV Analytics"])
 
-with col1:
-    tenure = st.slider("Tenure (months)", 0, 72, 12,
-                        help="How long the customer has been with the company")
-    monthly = st.number_input("Monthly Charges (₹)", min_value=0.0, value=70.0, step=5.0)
-    total = st.number_input("Total Charges (₹)", min_value=0.0, value=840.0, step=50.0)
+with tab_input:
+    c1, c2, c3 = st.columns(3)
 
-with col2:
-    contract = st.selectbox("📄 Contract", ["Month-to-month", "One year", "Two year"])
-    internet = st.selectbox("🌐 Internet Service", ["Fiber optic", "DSL", "No"])
-    payment = st.selectbox("💳 Payment Method", [
-        "Electronic check", "Mailed check",
-        "Bank transfer (automatic)", "Credit card (automatic)",
-    ])
-    phone = st.selectbox("📞 Phone Service", ["Yes", "No"])
+    with c1:
+        tenure = st.slider("Tenure (months)", 0, 72, 12)
+        monthly = st.number_input("Monthly Charges (₹)", min_value=0.0, value=75.0, step=5.0)
+        total = st.number_input("Total Charges (₹)", min_value=0.0, value=900.0, step=50.0)
+        contract = st.selectbox("Contract Type", ["Month-to-month", "One year", "Two year"])
 
-with col3:
-    net_dep_opts = ["Yes", "No", "No internet service"]
-    online_sec = st.selectbox("🔒 Online Security", net_dep_opts)
-    online_backup = st.selectbox("💾 Online Backup", net_dep_opts)
-    device = st.selectbox("🛡️ Device Protection", net_dep_opts)
-    tech = st.selectbox("🔧 Tech Support", net_dep_opts)
-    tv = st.selectbox("📺 Streaming TV", net_dep_opts)
-    movies = st.selectbox("🎬 Streaming Movies", net_dep_opts)
+    with c2:
+        internet = st.selectbox("Internet Service", ["Fiber optic", "DSL", "No"])
+        payment = st.selectbox("Payment Method", [
+            "Electronic check", "Mailed check",
+            "Bank transfer (automatic)", "Credit card (automatic)",
+        ])
+        phone = st.selectbox("Phone Service", ["Yes", "No"])
+        multiple_lines = st.selectbox("Multiple Lines", ["Yes", "No", "No phone service"])
 
-st.divider()
+    with c3:
+        sec_opts = ["Yes", "No", "No internet service"]
+        online_sec = st.selectbox("Online Security", sec_opts)
+        online_backup = st.selectbox("Online Backup", sec_opts)
+        device = st.selectbox("Device Protection", sec_opts)
+        tech = st.selectbox("Tech Support", sec_opts)
 
-# ── Prediction ─────────────────────────────────────────────
-if st.button("🚀 Predict Churn", use_container_width=True, type="primary"):
+    with st.expander("Additional Demographics", expanded=False):
+        d1, d2, d3, d4 = st.columns(4)
+        gender = d1.selectbox("Gender", ["Female", "Male"])
+        senior = d2.selectbox("Senior Citizen", [0, 1])
+        partner = d3.selectbox("Partner", ["No", "Yes"])
+        dependents = d4.selectbox("Dependents", ["No", "Yes"])
+        paperless = "Yes"
 
-    payload = {
-        "tenure": tenure,
-        "MonthlyCharges": monthly,
-        "TotalCharges": total,
-        "PhoneService": phone,
-        "OnlineSecurity": online_sec,
-        "OnlineBackup": online_backup,
-        "DeviceProtection": device,
-        "TechSupport": tech,
-        "StreamingTV": tv,
-        "StreamingMovies": movies,
-        "Contract": contract,
-        "InternetService": internet,
-        "PaymentMethod": payment,
-    }
+    st.divider()
 
-    with st.spinner("Analysing customer profile…"):
-        try:
-            res = requests.post(f"{API_URL}/predict", json=payload, timeout=10)
-            res.raise_for_status()
-            result = res.json()
-        except requests.exceptions.ConnectionError:
-            st.error("Cannot connect to the API. Make sure `uvicorn api:app` is running.")
-            st.stop()
-        except Exception as e:
-            st.error(f"Prediction failed: {e}")
-            st.stop()
+    if st.button("🚀 Analyze Churn Risk & Profit Action", type="primary", use_container_width=True):
+        payload = {
+            "tenure": tenure,
+            "MonthlyCharges": monthly,
+            "TotalCharges": total,
+            "Contract": contract,
+            "InternetService": internet,
+            "PaymentMethod": payment,
+            "PhoneService": phone,
+            "MultipleLines": multiple_lines,
+            "OnlineSecurity": online_sec,
+            "OnlineBackup": online_backup,
+            "DeviceProtection": device,
+            "TechSupport": tech,
+            "StreamingTV": "No",
+            "StreamingMovies": "No",
+            "PaperlessBilling": paperless,
+            "gender": gender,
+            "SeniorCitizen": senior,
+            "Partner": partner,
+            "Dependents": dependents,
+        }
 
-    prob = result["churn_probability"]
-    risk = result["risk_level"]
-    decision = result["decision"]
-    profit = result["expected_profit"]
+        with st.spinner("Executing model pipeline & SHAP attribution..."):
+            try:
+                res = requests.post(f"{API_URL}/predict?threshold={retention_threshold}", json=payload, timeout=10)
+                res.raise_for_status()
+                data = res.json()
+            except requests.exceptions.ConnectionError:
+                st.error("Connection failed. Please start the FastAPI backend: `uvicorn api:app --reload`")
+                st.stop()
+            except Exception as e:
+                st.error(f"Prediction failed: {e}")
+                st.stop()
 
-    risk_class = f"risk-{risk}"
+        prob = data["churn_probability"]
+        risk = data["risk_level"]
+        decision = data["decision"]
+        clv = data["clv"]
+        profit = data["expected_profit"]
+        quadrant = data["action_quadrant"]
+        priority = data["priority"]
+        drivers = data.get("top_churn_drivers", [])
 
-    # ── Results ────────────────────────────────────────
-    st.subheader("📈 Prediction Result")
+        risk_css = f"risk-{risk}"
 
-    r1, r2, r3 = st.columns(3)
+        # Metrics Display
+        st.subheader("📈 Intelligence Assessment")
+        m1, m2, m3, m4 = st.columns(4)
 
-    with r1:
-        st.markdown(
-            f'<div class="metric-card {risk_class}">'
-            f'<h2>{prob:.1%}</h2>'
-            f'<p>Churn Probability</p>'
-            f'</div>',
-            unsafe_allow_html=True,
-        )
+        with m1:
+            st.markdown(f'<div class="metric-card {risk_css}"><h3>{prob:.1%}</h3><p>Churn Probability</p></div>', unsafe_allow_html=True)
+        with m2:
+            st.markdown(f'<div class="metric-card {risk_css}"><h3>{risk.upper()}</h3><p>Risk Priority: {priority}</p></div>', unsafe_allow_html=True)
+        with m3:
+            st.markdown(f'<div class="metric-card {risk_css}"><h3>₹{clv:,.0f}</h3><p>Customer Lifetime Value (CLV)</p></div>', unsafe_allow_html=True)
+        with m4:
+            st.markdown(f'<div class="metric-card {risk_css}"><h3>₹{profit:,.0f}</h3><p>Expected Retention Profit</p></div>', unsafe_allow_html=True)
 
-    with r2:
-        risk_emoji = {"high": "🔴", "medium": "🟡", "low": "🟢"}.get(risk, "⚪")
-        st.markdown(
-            f'<div class="metric-card {risk_class}">'
-            f'<h2>{risk_emoji} {risk.upper()}</h2>'
-            f'<p>Risk Level</p>'
-            f'</div>',
-            unsafe_allow_html=True,
-        )
+        st.progress(min(prob, 1.0))
 
-    with r3:
-        action_emoji = "🚨 RETAIN" if decision == "retain" else "✅ NO ACTION"
-        st.markdown(
-            f'<div class="metric-card {risk_class}">'
-            f'<h2>{action_emoji}</h2>'
-            f'<p>Expected Profit: ₹{profit:,.0f}</p>'
-            f'</div>',
-            unsafe_allow_html=True,
-        )
+        # SHAP Drivers & Action Quadrant
+        r1, r2 = st.columns(2)
 
-    # ── Churn probability bar ─────────────────────────
-    st.progress(min(prob, 1.0))
+        with r1:
+            st.subheader("🔍 Top Risk Drivers (SHAP Attribution)")
+            if drivers:
+                for d in drivers:
+                    st.markdown(f'<div class="driver-card"><strong>{d["feature"]}</strong>: {d["impact"]}</div>', unsafe_allow_html=True)
+            else:
+                st.info("No significant risk drivers identified.")
 
-    # ── Customer summary ──────────────────────────────
-    with st.expander("📋 Customer Profile Summary", expanded=False):
-        s1, s2 = st.columns(2)
-        with s1:
-            st.markdown(f"**Tenure:** {tenure} months")
-            st.markdown(f"**Monthly Charges:** ₹{monthly:,.2f}")
-            st.markdown(f"**Total Charges:** ₹{total:,.2f}")
-            st.markdown(f"**Contract:** {contract}")
-            st.markdown(f"**Internet:** {internet}")
-        with s2:
-            st.markdown(f"**Payment:** {payment}")
-            st.markdown(f"**Phone Service:** {phone}")
-            st.markdown(f"**Online Security:** {online_sec}")
-            st.markdown(f"**Tech Support:** {tech}")
-            services = sum(1 for s in [online_sec, online_backup, device, tech, tv, movies] if s == "Yes")
-            st.markdown(f"**Services Subscribed:** {services} / 6")
+        with r2:
+            st.subheader("🎯 CLV Retention Action Matrix")
+            st.markdown(f'''
+            <div class="action-box">
+                <h4>Recommended Action: {quadrant}</h4>
+                <p><strong>System Decision:</strong> {decision.upper()}</p>
+                <p><strong>Priority Tier:</strong> {priority}</p>
+            </div>
+            ''', unsafe_allow_html=True)
+
+# ── Batch Upload Tab ───────────────────────────────────────
+with tab_batch_ui:
+    st.subheader("📁 Upload CSV for Batch Assessment")
+    file_up = st.file_uploader("Select CSV file", type=["csv"], key="streamlit_batch_file")
+
+    if file_up is not None:
+        if st.button("🚀 Process Batch CSV", type="primary"):
+            files = {"file": (file_up.name, file_up.getvalue(), "text/csv")}
+            try:
+                b_res = requests.post(f"{API_URL}/predict_batch?threshold={retention_threshold}", files=files, timeout=30)
+                b_res.raise_for_status()
+                batch_data = b_res.json()
+
+                st.success(f"Successfully processed {batch_data['total_records']} customer records.")
+                summary = batch_data["summary"]
+
+                sm1, sm2, sm3, sm4 = st.columns(4)
+                sm1.metric("Total Customers", batch_data['total_records'])
+                sm2.metric("Mean Churn Prob", f"{summary['mean_churn_probability']:.1%}")
+                sm3.metric("Action Retain Count", summary['retain_count'])
+                sm4.metric("Total Net Profit", f"₹{summary['total_expected_net_profit']:,.0f}")
+
+                df_out = pd.DataFrame(batch_data["predictions"])
+                st.dataframe(df_out, use_container_width=True)
+
+                csv_bytes = df_out.to_csv(index=False).encode("utf-8")
+                st.download_button("📥 Download Batch Prediction Results CSV", csv_bytes, "batch_churn_predictions.csv", "text/csv")
+            except Exception as exc:
+                st.error(f"Batch processing failed: {exc}")

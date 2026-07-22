@@ -16,7 +16,18 @@ DATA_PROCESSED_DIR = os.path.join(BASE_DIR, "data", "processed")
 MODEL_DIR = os.path.join(BASE_DIR, "models")
 LOG_DIR = os.path.join(BASE_DIR, "logs")
 
-RAW_CSV = os.path.join(DATA_RAW_DIR, "WA_Fn-UseC_-Telco-Customer-Churn (1).csv")
+# Dynamic raw CSV resolution
+def get_raw_csv_path() -> str:
+    default_path = os.path.join(DATA_RAW_DIR, "WA_Fn-UseC_-Telco-Customer-Churn (1).csv")
+    if os.path.isfile(default_path):
+        return default_path
+    if os.path.exists(DATA_RAW_DIR):
+        csv_files = [f for f in os.listdir(DATA_RAW_DIR) if f.endswith(".csv")]
+        if csv_files:
+            return os.path.join(DATA_RAW_DIR, csv_files[0])
+    return default_path
+
+RAW_CSV = get_raw_csv_path()
 MODEL_PATH = os.path.join(MODEL_DIR, "churn_pipeline.pkl")
 
 # ============================================================

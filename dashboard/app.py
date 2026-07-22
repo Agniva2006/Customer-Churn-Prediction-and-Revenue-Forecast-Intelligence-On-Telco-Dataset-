@@ -1,169 +1,170 @@
-"""Standalone Streamlit dashboard — runs independently of the FastAPI service.
-
-Loads the production pipeline directly from disk and supports
-both single predictions and batch CSV uploads.
-"""
+"""Standalone Streamlit dashboard v3.0 — direct unified pipeline inference without API requirement."""
 
 import os
-
 import joblib
 import pandas as pd
 import streamlit as st
 
-# ── Resolve model path ─────────────────────────────────────
+from src.profit_simulation import compute_individualized_profit
+from src.explainability import get_top_churn_drivers
+
+# Resolve production model path
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODEL_PATH = os.path.join(BASE_DIR, "models", "churn_pipeline.pkl")
 
-# ── Page config ────────────────────────────────────────────
 st.set_page_config(
-    page_title="Churn Dashboard",
+    page_title="Telecom Churn Dashboard",
     page_icon="📊",
     layout="wide",
 )
 
-st.title("📊 Telecom Churn — Standalone Dashboard")
-st.caption("Direct model inference without the FastAPI server")
+st.title("📊 Telecom Churn Intelligence — Standalone Dashboard")
+st.caption("Direct pipeline inference engine (Offline Mode)")
 
-# ── Load model ─────────────────────────────────────────────
 @st.cache_resource
-def load_model():
+def load_production_pipeline():
     if not os.path.isfile(MODEL_PATH):
         return None
-    return joblib.load(MODEL_PATH)
+    try:
+        return joblib.load(MODEL_PATH)
+    except Exception as exc:
+        st.error(f"Failed loading model pipeline: {exc}")
+        return None
 
-model = load_model()
+pipeline = load_production_pipeline()
 
-if model is None:
+if pipeline is None:
     st.error(
-        f"Model not found at `{MODEL_PATH}`.\n\n"
-        "Please train the model first via the notebooks."
+        f"Production model pipeline not found at `{MODEL_PATH}`.\n\n"
+        "Please generate the production pipeline first by running `python train.py`."
     )
     st.stop()
 
-st.success("✅ Model loaded successfully")
+st.success("✅ Production Pipeline Loaded")
 
-# ── Business constants ─────────────────────────────────────
-THRESHOLD = 0.15
-RETENTION_COST = 500
-ANNUAL_REVENUE = 6000
-SAVE_RATE = 0.6
+DEFAULT_THRESHOLD = 0.15
 
-tab_single, tab_batch = st.tabs(["🔎 Single Prediction", "📁 Batch Upload"])
+tab_single, tab_batch = st.tabs(["🔎 Single Customer Inference", "📁 Batch CSV Analytics"])
 
 # ===================== SINGLE PREDICTION ===================
 with tab_single:
-    st.subheader("Enter Customer Details")
+    st.subheader("Customer Input Attributes")
 
     c1, c2, c3 = st.columns(3)
 
     with c1:
-        tenure = st.slider("Tenure (months)", 0, 72, 12, key="s_tenure")
-        monthly = st.number_input("Monthly Charges (₹)", min_value=0.0, value=70.0, step=5.0, key="s_monthly")
-        total = st.number_input("Total Charges (₹)", min_value=0.0, value=840.0, step=50.0, key="s_total")
+        tenure = st.slider("Tenure (months)", 0, 72, 12, key="dash_tenure")
+        monthly = st.number_input("Monthly Charges (₹)", min_value=0.0, value=75.0, step=5.0, key="dash_monthly")
+        total = st.number_input("Total Charges (₹)", min_value=0.0, value=900.0, step=50.0, key="dash_total")
+        contract = st.selectbox("Contract", ["Month-to-month", "One year", "Two year"], key="dash_contract")
 
     with c2:
-        contract = st.selectbox("Contract", ["Month-to-month", "One year", "Two year"], key="s_contract")
-        internet = st.selectbox("Internet Service", ["Fiber optic", "DSL", "No"], key="s_internet")
+        internet = st.selectbox("Internet Service", ["Fiber optic", "DSL", "No"], key="dash_internet")
         payment = st.selectbox("Payment Method", [
             "Electronic check", "Mailed check",
             "Bank transfer (automatic)", "Credit card (automatic)",
-        ], key="s_payment")
-        phone = st.selectbox("Phone Service", ["Yes", "No"], key="s_phone")
+        ], key="dash_payment")
+        phone = st.selectbox("Phone Service", ["Yes", "No"], key="dash_phone")
+        multiple = st.selectbox("Multiple Lines", ["Yes", "No", "No phone service"], key="dash_multi")
 
     with c3:
-        net_opts = ["Yes", "No", "No internet service"]
-        online_sec = st.selectbox("Online Security", net_opts, key="s_sec")
-        online_backup = st.selectbox("Online Backup", net_opts, key="s_backup")
-        device = st.selectbox("Device Protection", net_opts, key="s_device")
-        tech = st.selectbox("Tech Support", net_opts, key="s_tech")
-        tv = st.selectbox("Streaming TV", net_opts, key="s_tv")
-        movies = st.selectbox("Streaming Movies", net_opts, key="s_movies")
+        sec_opts = ["Yes", "No", "No internet service"]
+        online_sec = st.selectbox("Online Security", sec_opts, key="dash_sec")
+        online_backup = st.selectbox("Online Backup", sec_opts, key="dash_backup")
+        device = st.selectbox("Device Protection", sec_opts, key="dash_device")
+        tech = st.selectbox("Tech Support", sec_opts, key="dash_tech")
 
-    if st.button("🚀 Predict", use_container_width=True, type="primary", key="s_predict"):
+    threshold = st.slider("Targeting Threshold", 0.05, 0.50, DEFAULT_THRESHOLD, 0.01, key="dash_thresh")
+
+    if st.button("🚀 Run Inference", type="primary", use_container_width=True, key="dash_predict"):
         input_df = pd.DataFrame([{
             "tenure": tenure,
             "MonthlyCharges": monthly,
             "TotalCharges": total,
+            "Contract": contract,
+            "InternetService": internet,
+            "PaymentMethod": payment,
             "PhoneService": phone,
+            "MultipleLines": multiple,
             "OnlineSecurity": online_sec,
             "OnlineBackup": online_backup,
             "DeviceProtection": device,
             "TechSupport": tech,
-            "StreamingTV": tv,
-            "StreamingMovies": movies,
-            "Contract": contract,
-            "InternetService": internet,
-            "PaymentMethod": payment,
+            "StreamingTV": "No",
+            "StreamingMovies": "No",
+            "PaperlessBilling": "Yes",
+            "gender": "Female",
+            "SeniorCitizen": 0,
+            "Partner": "No",
+            "Dependents": "No",
         }])
 
-        prob = float(model.predict_proba(input_df)[:, 1][0])
-        decision = "RETAIN" if prob >= THRESHOLD else "NO ACTION"
-        profit = (SAVE_RATE * ANNUAL_REVENUE) - RETENTION_COST if prob >= THRESHOLD else 0
+        prob = float(pipeline.predict_proba(input_df)[:, 1][0])
+        profit_info = compute_individualized_profit(monthly, prob, threshold=threshold)
+        drivers = get_top_churn_drivers(pipeline, input_df, top_n=3)
 
         st.divider()
-        m1, m2, m3 = st.columns(3)
+        m1, m2, m3, m4 = st.columns(4)
         m1.metric("Churn Probability", f"{prob:.1%}")
-        m2.metric("Decision", decision)
-        m3.metric("Expected Profit", f"₹{profit:,.0f}")
-
-        if prob >= 0.6:
-            st.error("🔴 HIGH RISK — Immediate retention action recommended")
-        elif prob >= 0.3:
-            st.warning("🟡 MEDIUM RISK — Monitor closely")
-        else:
-            st.success("🟢 LOW RISK — Customer appears stable")
+        m2.metric("Risk Priority", profit_info["priority"])
+        m3.metric("Customer CLV", f"₹{profit_info['clv']:,.0f}")
+        m4.metric("Expected Net Profit", f"₹{profit_info['expected_profit']:,.0f}")
 
         st.progress(min(prob, 1.0))
 
+        d_col, a_col = st.columns(2)
+        with d_col:
+            st.subheader("Top Risk Drivers (SHAP)")
+            for d in drivers:
+                st.info(f"**{d['feature']}**: {d['impact']}")
+
+        with a_col:
+            st.subheader("Retention Action Recommendation")
+            st.warning(f"**{profit_info['action_quadrant']}** (Decision: {profit_info['decision'].upper()})")
+
 # ===================== BATCH PREDICTION ====================
 with tab_batch:
-    st.subheader("Upload a CSV file")
-    st.info(
-        "The CSV must contain the same columns the model was trained on.\n\n"
-        "Required columns: tenure, MonthlyCharges, TotalCharges, PhoneService, "
-        "OnlineSecurity, OnlineBackup, DeviceProtection, TechSupport, "
-        "StreamingTV, StreamingMovies, Contract, InternetService, PaymentMethod"
-    )
+    st.subheader("Upload CSV File for Direct Inference")
+    file_up = st.file_uploader("Upload customer CSV dataset", type=["csv"], key="dash_upload")
 
-    uploaded = st.file_uploader("Choose a CSV file", type="csv", key="b_upload")
+    if file_up is not None:
+        df_batch = pd.read_csv(file_up)
+        st.write(f"**Loaded {len(df_batch)} customer records**")
+        st.dataframe(df_batch.head(), use_container_width=True)
 
-    if uploaded is not None:
-        df = pd.read_csv(uploaded)
-        st.write(f"**Uploaded {len(df)} rows**")
-        st.dataframe(df.head(), use_container_width=True)
+        if st.button("🚀 Execute Batch Pipeline Prediction", type="primary", key="dash_batch_run"):
+            with st.spinner("Executing pipeline inference..."):
+                probs = pipeline.predict_proba(df_batch)[:, 1]
 
-        if st.button("🚀 Run Batch Prediction", type="primary", key="b_predict"):
-            with st.spinner("Processing…"):
-                probs = model.predict_proba(df)[:, 1]
+            res_df = df_batch.copy()
+            res_df["churn_probability"] = probs.round(4)
+            res_df["risk_level"] = pd.cut(probs, bins=[-0.01, 0.3, 0.6, 1.01], labels=["low", "medium", "high"])
 
-            results = df.copy()
-            results["churn_probability"] = probs.round(4)
-            results["risk_level"] = pd.cut(
-                probs, bins=[-0.01, 0.3, 0.6, 1.01],
-                labels=["low", "medium", "high"],
-            )
-            results["decision"] = ["RETAIN" if p >= THRESHOLD else "NO ACTION" for p in probs]
+            decisions = []
+            profits = []
+            quadrants = []
+
+            for idx, p in enumerate(probs):
+                m_val = float(df_batch.iloc[idx]["MonthlyCharges"]) if "MonthlyCharges" in df_batch.columns else 70.0
+                info = compute_individualized_profit(m_val, p, threshold=threshold)
+                decisions.append(info["decision"])
+                profits.append(info["expected_profit"])
+                quadrants.append(info["action_quadrant"])
+
+            res_df["decision"] = decisions
+            res_df["expected_profit"] = profits
+            res_df["action_quadrant"] = quadrants
 
             st.divider()
-            st.subheader("Results")
-
-            s1, s2, s3 = st.columns(3)
-            s1.metric("Total Customers", len(results))
-            s2.metric("Retain", (results["decision"] == "RETAIN").sum())
-            s3.metric("Avg Churn Prob", f"{probs.mean():.1%}")
+            b1, b2, b3 = st.columns(3)
+            b1.metric("Total Records", len(res_df))
+            b2.metric("Retained Customers", (res_df["decision"] == "retain").sum())
+            b3.metric("Total Expected Profit", f"₹{sum(profits):,.0f}")
 
             st.dataframe(
-                results[["churn_probability", "risk_level", "decision"]].style.background_gradient(
-                    subset=["churn_probability"], cmap="RdYlGn_r"
-                ),
+                res_df[["churn_probability", "risk_level", "decision", "expected_profit", "action_quadrant"]],
                 use_container_width=True,
             )
 
-            # Download button
-            csv_data = results.to_csv(index=False).encode("utf-8")
-            st.download_button(
-                label="📥 Download Results CSV",
-                data=csv_data,
-                file_name="churn_predictions.csv",
-                mime="text/csv",
-            )
+            csv_out = res_df.to_csv(index=False).encode("utf-8")
+            st.download_button("📥 Download Batch Prediction Results CSV", csv_out, "dashboard_predictions.csv", "text/csv")

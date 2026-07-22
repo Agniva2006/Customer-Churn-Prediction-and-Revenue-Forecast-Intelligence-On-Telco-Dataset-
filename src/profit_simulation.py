@@ -1,10 +1,72 @@
-"""Profit-optimized threshold selection and Monte Carlo revenue simulation."""
+"""Profit-optimized threshold selection, CLV-based individualized action recommendations, and Monte Carlo risk simulation."""
 
-from typing import Tuple
-
+from typing import Any, Dict, Tuple
 import numpy as np
 import pandas as pd
 from sklearn.metrics import confusion_matrix
+
+
+def compute_individualized_profit(
+    monthly_charge: float,
+    prob: float,
+    threshold: float = 0.15,
+    retention_cost: float = 500.0,
+    save_rate: float = 0.6,
+    multiplier: float = 12.0
+) -> Dict[str, Any]:
+    """Compute individual customer lifetime profit and assign retention action quadrant.
+
+    Parameters
+    ----------
+    monthly_charge : float
+        Customer's monthly billing rate.
+    prob : float
+        Predicted probability of churn.
+    threshold : float
+        Targeting threshold.
+    retention_cost : float
+        Cost of retention intervention (₹).
+    save_rate : float
+        Success probability of retention offer.
+    multiplier : float
+        Annualization multiplier (default 12 months).
+
+    Returns
+    -------
+    dict
+        Contains expected_clv, expected_profit, decision, action_quadrant, priority.
+    """
+    individual_clv = monthly_charge * multiplier
+
+    if prob >= threshold:
+        decision = "retain"
+        expected_profit = (save_rate * individual_clv) - retention_cost
+    else:
+        decision = "no_action"
+        expected_profit = 0.0
+
+    # Assign Action Matrix Quadrant
+    if prob >= 0.6:
+        if monthly_charge >= 75.0:
+            quadrant = "VIP Concierge Outreach & High-Value Offer"
+            priority = "P1 — Critical"
+        else:
+            quadrant = "Automated Digital Retention Discount"
+            priority = "P2 — High"
+    elif prob >= 0.3:
+        quadrant = "Targeted Loyalty Campaign & Service Check-in"
+        priority = "P3 — Medium"
+    else:
+        quadrant = "Standard Account Service — No Intervention Required"
+        priority = "P4 — Low"
+
+    return {
+        "clv": round(individual_clv, 2),
+        "expected_profit": round(expected_profit, 2),
+        "decision": decision,
+        "action_quadrant": quadrant,
+        "priority": priority,
+    }
 
 
 def simulate_profit(
@@ -14,26 +76,7 @@ def simulate_profit(
     annual_revenue: float = 6000,
     save_rate: float = 0.6,
 ) -> pd.DataFrame:
-    """Compute net profit across a range of classification thresholds.
-
-    Parameters
-    ----------
-    y_true : array-like
-        Ground-truth binary labels.
-    y_probs : array-like
-        Predicted churn probabilities.
-    retention_cost : float
-        Cost to attempt retaining one customer (₹).
-    annual_revenue : float
-        Annual revenue per customer (₹).
-    save_rate : float
-        Probability a retention offer succeeds.
-
-    Returns
-    -------
-    pd.DataFrame
-        Columns: threshold, TP, FP, FN, TN, net_profit.
-    """
+    """Compute net profit across a range of classification thresholds."""
     thresholds = np.arange(0.05, 0.95, 0.01)
     results = []
 
@@ -64,13 +107,7 @@ def find_optimal_threshold(
     annual_revenue: float = 6000,
     save_rate: float = 0.6,
 ) -> Tuple[float, float]:
-    """Return the threshold that maximises net profit.
-
-    Returns
-    -------
-    tuple
-        (optimal_threshold, max_net_profit)
-    """
+    """Return the threshold that maximises net profit."""
     df = simulate_profit(y_true, y_probs, retention_cost, annual_revenue, save_rate)
     best = df.loc[df["net_profit"].idxmax()]
     return float(best["threshold"]), float(best["net_profit"])
@@ -84,31 +121,7 @@ def monte_carlo_revenue(
     n_simulations: int = 1000,
     random_state: int = 42,
 ) -> np.ndarray:
-    """Simulate total revenue under churn uncertainty.
-
-    Draws ``n_simulations`` churn rates from a clipped normal distribution
-    and computes total revenue for each scenario.
-
-    Parameters
-    ----------
-    n_customers : int
-        Current customer base size.
-    avg_revenue : float
-        Average annual revenue per customer.
-    churn_rate_mean : float
-        Expected churn rate (e.g. 0.26).
-    churn_rate_std : float
-        Standard deviation of churn rate.
-    n_simulations : int
-        Number of Monte Carlo iterations.
-    random_state : int
-        Reproducibility seed.
-
-    Returns
-    -------
-    np.ndarray
-        Array of simulated total revenues (length ``n_simulations``).
-    """
+    """Simulate total revenue under churn uncertainty via Monte Carlo drawing."""
     rng = np.random.default_rng(random_state)
     churn_rates = rng.normal(churn_rate_mean, churn_rate_std, n_simulations)
     churn_rates = np.clip(churn_rates, 0, 1)

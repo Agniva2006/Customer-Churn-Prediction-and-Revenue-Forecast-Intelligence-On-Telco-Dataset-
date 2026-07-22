@@ -1,14 +1,23 @@
-"""Model training, evaluation, cross-validation, and persistence."""
+"""Model pipeline construction, training, probability calibration, cross-validation, and serialization."""
 
+import logging
 from typing import Any, Dict, Optional, Tuple
-
 import joblib
 import numpy as np
-from sklearn.model_selection import StratifiedKFold, cross_val_score, train_test_split
+import pandas as pd
+from sklearn.calibration import CalibratedClassifierCV
+from sklearn.compose import ColumnTransformer
 from sklearn.metrics import roc_auc_score
+from sklearn.model_selection import StratifiedKFold, cross_val_score, train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from xgboost import XGBClassifier
 
-# Default hyperparameters (tuned via RandomizedSearchCV in notebooks)
+from src.transformers import TelcoCleanerTransformer, TelcoFeatureTransformer
+
+logger = logging.getLogger(__name__)
+
+# Default XGBoost Hyperparameters
 DEFAULT_PARAMS: Dict[str, Any] = {
     "n_estimators": 400,
     "max_depth": 4,
@@ -19,28 +28,54 @@ DEFAULT_PARAMS: Dict[str, Any] = {
     "eval_metric": "logloss",
 }
 
+NUMERIC_FEATURES = [
+    "tenure", "MonthlyCharges", "TotalCharges",
+    "service_count", "avg_revenue_per_month",
+    "contract_risk_score", "high_value_customer",
+    "auto_payment", "monthly_to_total_ratio"
+]
+
+CATEGORICAL_FEATURES = [
+    "gender", "SeniorCitizen", "Partner", "Dependents",
+    "PhoneService", "MultipleLines", "InternetService",
+    "OnlineSecurity", "OnlineBackup", "DeviceProtection",
+    "TechSupport", "StreamingTV", "StreamingMovies",
+    "Contract", "PaperlessBilling", "PaymentMethod", "tenure_group"
+]
+
+
+def build_unified_pipeline(params: Optional[Dict[str, Any]] = None) -> Pipeline:
+    """Construct an end-to-end scikit-learn Pipeline incorporating cleaning,
+    feature engineering, column preprocessing, and calibrated XGBoost classification.
+    """
+    xgb_params = {**DEFAULT_PARAMS, **(params or {})}
+    base_xgb = XGBClassifier(**xgb_params)
+    calibrated_clf = CalibratedClassifierCV(estimator=base_xgb, method="isotonic", cv=3)
+
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ("num", StandardScaler(), NUMERIC_FEATURES),
+            ("cat", OneHotEncoder(handle_unknown="ignore", sparse_output=False), CATEGORICAL_FEATURES),
+        ],
+        remainder="passthrough",
+    )
+
+    pipeline = Pipeline(
+        steps=[
+            ("cleaner", TelcoCleanerTransformer(drop_customer_id=True)),
+            ("feature_engineer", TelcoFeatureTransformer()),
+            ("preprocessor", preprocessor),
+            ("classifier", calibrated_clf),
+        ]
+    )
+
+    return pipeline
+
 
 def split_data(
-    X, y, test_size: float = 0.2, random_state: int = 42
+    X: pd.DataFrame, y: pd.Series, test_size: float = 0.2, random_state: int = 42
 ) -> Tuple:
-    """Stratified train/test split.
-
-    Parameters
-    ----------
-    X : array-like
-        Feature matrix.
-    y : array-like
-        Binary target vector.
-    test_size : float
-        Proportion held out for testing.
-    random_state : int
-        Reproducibility seed.
-
-    Returns
-    -------
-    tuple
-        (X_train, X_test, y_train, y_test)
-    """
+    """Stratified train/test split."""
     return train_test_split(
         X, y,
         test_size=test_size,
@@ -49,81 +84,45 @@ def split_data(
     )
 
 
-def train_xgb(
-    X_train, y_train, params: Optional[Dict[str, Any]] = None
-) -> XGBClassifier:
-    """Train an XGBoost classifier.
-
-    Parameters
-    ----------
-    X_train, y_train : array-like
-        Training data.
-    params : dict, optional
-        Hyperparameters; falls back to ``DEFAULT_PARAMS``.
-
-    Returns
-    -------
-    XGBClassifier
-        Fitted model.
-    """
-    final_params = {**DEFAULT_PARAMS, **(params or {})}
-    model = XGBClassifier(**final_params)
-    model.fit(X_train, y_train)
-    return model
+def train_pipeline(
+    X_train: pd.DataFrame, y_train: pd.Series, params: Optional[Dict[str, Any]] = None
+) -> Pipeline:
+    """Train the full unified pipeline on raw training data."""
+    pipeline = build_unified_pipeline(params)
+    pipeline.fit(X_train, y_train)
+    logger.info("Fitted unified calibrated pipeline successfully.")
+    return pipeline
 
 
-def cross_validate(
-    X, y, params: Optional[Dict[str, Any]] = None,
-    n_splits: int = 5, random_state: int = 42
+def cross_validate_pipeline(
+    X: pd.DataFrame, y: pd.Series, n_splits: int = 5, random_state: int = 42
 ) -> np.ndarray:
-    """Stratified K-Fold cross-validation reporting ROC-AUC per fold.
-
-    Parameters
-    ----------
-    X, y : array-like
-        Full dataset (not yet split).
-    params : dict, optional
-        Hyperparameters for XGBoost.
-    n_splits : int
-        Number of folds (default 5).
-    random_state : int
-        Reproducibility seed.
-
-    Returns
-    -------
-    np.ndarray
-        Array of ROC-AUC scores, one per fold.
-    """
-    final_params = {**DEFAULT_PARAMS, **(params or {})}
-    model = XGBClassifier(**final_params)
+    """Perform 5-Fold Stratified Cross-Validation on the full pipeline."""
+    pipeline = build_unified_pipeline()
     cv = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=random_state)
-    scores = cross_val_score(model, X, y, cv=cv, scoring="roc_auc")
+    scores = cross_val_score(pipeline, X, y, cv=cv, scoring="roc_auc")
     return scores
 
 
-def evaluate(model, X_test, y_test) -> Tuple[float, np.ndarray]:
-    """Evaluate a trained model and return ROC-AUC + predicted probabilities."""
-    probs = model.predict_proba(X_test)[:, 1]
-    return roc_auc_score(y_test, probs), probs
+def evaluate_pipeline(pipeline: Pipeline, X_test: pd.DataFrame, y_test: pd.Series) -> Tuple[float, np.ndarray]:
+    """Evaluate pipeline predictions and return ROC-AUC score + probabilities."""
+    probs = pipeline.predict_proba(X_test)[:, 1]
+    auc = roc_auc_score(y_test, probs)
+    return float(auc), probs
 
 
-def save_model(model, path: str) -> None:
-    """Serialize a model to disk."""
+def save_model(model: Any, path: str) -> None:
+    """Serialize the pipeline model to disk."""
     joblib.dump(model, path)
+    logger.info("Saved pipeline to %s", path)
 
 
-def load_model(path: str):
-    """Load a serialized model from disk.
-
-    Raises
-    ------
-    FileNotFoundError
-        If the model file does not exist.
-    """
+def load_model(path: str) -> Any:
+    """Load a serialized pipeline model from disk."""
     try:
         return joblib.load(path)
     except FileNotFoundError:
         raise FileNotFoundError(
             f"Model file not found at '{path}'. "
-            "Please train the model first or check the path."
+            "Run 'python train.py' to generate the production pipeline."
         )
