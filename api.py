@@ -25,6 +25,7 @@ from pydantic import BaseModel, Field
 from src.profit_simulation import compute_individualized_profit
 from src.explainability import get_top_churn_drivers
 from src.drift import evaluate_batch_drift
+from src.database import log_prediction, get_recent_predictions
 
 # ==============================
 # App & CORS Configuration
@@ -223,6 +224,21 @@ def predict(data: CustomerData, threshold: float = Query(DEFAULT_THRESHOLD, ge=0
         save_rate=SAVE_RATE,
     )
 
+    try:
+        log_prediction(
+            monthly_charges=float(data.MonthlyCharges),
+            total_charges=float(data.TotalCharges),
+            tenure=int(data.tenure),
+            contract=str(data.Contract),
+            risk_probability=round(prob, 4),
+            risk_level=_risk_level(prob),
+            expected_profit=float(profit_info["expected_profit"]),
+            clv=float(profit_info["clv"]),
+            action_quadrant=str(profit_info["action_quadrant"])
+        )
+    except Exception as db_err:
+        logger.error("Failed to log prediction to SQLite: %s", db_err)
+
     logger.info(
         "PREDICT | tenure=%d monthly=%.1f contract=%s | prob=%.4f decision=%s action='%s'",
         data.tenure, data.MonthlyCharges, data.Contract, prob, profit_info["decision"], profit_info["action_quadrant"]
@@ -272,8 +288,28 @@ def predict_batch(file: UploadFile = File(...), threshold: float = Query(DEFAULT
     for idx, prob in enumerate(probs):
         prob = float(prob)
         monthly_val = float(df.iloc[idx]["MonthlyCharges"]) if "MonthlyCharges" in df.columns else 70.0
+        total_charges_val = float(df.iloc[idx]["TotalCharges"]) if "TotalCharges" in df.columns else 0.0
+        tenure_val = int(df.iloc[idx]["tenure"]) if "tenure" in df.columns else 0
+        contract_val = str(df.iloc[idx]["Contract"]) if "Contract" in df.columns else "Month-to-month"
+
         profit_info = compute_individualized_profit(monthly_val, prob, threshold=threshold)
         total_expected_profit += profit_info["expected_profit"]
+
+        # Log prediction to database
+        try:
+            log_prediction(
+                monthly_charges=monthly_val,
+                total_charges=total_charges_val,
+                tenure=tenure_val,
+                contract=contract_val,
+                risk_probability=round(prob, 4),
+                risk_level=_risk_level(prob),
+                expected_profit=float(profit_info["expected_profit"]),
+                clv=float(profit_info["clv"]),
+                action_quadrant=str(profit_info["action_quadrant"])
+            )
+        except Exception as db_err:
+            logger.error("Failed to log batch prediction row %d: %s", idx, db_err)
 
         results.append({
             "record_index": idx,
@@ -313,3 +349,15 @@ def monitor_drift(file: UploadFile = File(...)):
 
     drift_report = evaluate_batch_drift(baseline_df, current_df)
     return drift_report
+
+
+@app.get("/monitor/recent")
+def monitor_recent(limit: int = Query(100, ge=1, le=1000)):
+    """Retrieve logged prediction audit history from the SQLite database."""
+    try:
+        df = get_recent_predictions(limit)
+        # Convert DataFrame to a list of dicts
+        records = df.to_dict(orient="records")
+        return {"count": len(records), "records": records}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to query audit database: {exc}")

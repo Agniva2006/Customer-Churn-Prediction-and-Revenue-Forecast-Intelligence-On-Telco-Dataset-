@@ -100,7 +100,7 @@ with st.sidebar:
 # ── Form Inputs ────────────────────────────────────────────
 st.subheader("👤 Customer Profile Input")
 
-tab_input, tab_batch_ui = st.tabs(["🔎 Single Prediction", "📁 Batch CSV Analytics"])
+tab_input, tab_batch_ui, tab_mlops = st.tabs(["🔎 Single Prediction", "📁 Batch CSV Analytics", "⚙️ MLOps & Data Drift"])
 
 with tab_input:
     c1, c2, c3 = st.columns(3)
@@ -248,3 +248,74 @@ with tab_batch_ui:
                 st.download_button("📥 Download Batch Prediction Results CSV", csv_bytes, "batch_churn_predictions.csv", "text/csv")
             except Exception as exc:
                 st.error(f"Batch processing failed: {exc}")
+
+# ── MLOps & Data Drift Tab ─────────────────────────────────
+with tab_mlops:
+    st.subheader("⚙️ MLOps Prediction Auditing & Drift Diagnostics")
+
+    m_col1, m_col2 = st.columns([1, 2])
+
+    with m_col1:
+        st.markdown("### 🗄️ Audit Database Status")
+        try:
+            audit_res = requests.get(f"{API_URL}/monitor/recent?limit=1000", timeout=5)
+            if audit_res.status_code == 200:
+                audit_data = audit_res.json()
+                records = audit_data.get("records", [])
+                st.metric("Total Logged Predictions (Audit DB)", len(records))
+                
+                if records:
+                    df_audit = pd.DataFrame(records)
+                    avg_prob = df_audit["risk_probability"].mean()
+                    st.metric("Mean Logged Prediction Risk", f"{avg_prob:.1%}")
+                    
+                    # Risk breakdown chart
+                    risk_counts = df_audit["risk_level"].value_counts()
+                    st.write("#### Risk Level Share")
+                    st.bar_chart(risk_counts)
+                else:
+                    st.info("No predictions recorded in audit logs yet. Submit predictions to populate.")
+            else:
+                st.error("Could not query predictions history from API.")
+        except Exception as e:
+            st.error(f"Prediction log service connection offline: {e}")
+
+    with m_col2:
+        st.markdown("### 📉 Live Data Drift Evaluation")
+        st.markdown("Upload a production inference batch CSV file to compare its distribution against baseline training data.")
+        
+        drift_file = st.file_uploader("Upload production CSV batch to check drift", type=["csv"], key="streamlit_drift_file")
+        if drift_file is not None:
+            if st.button("🔍 Evaluate Distribution Drift", type="primary"):
+                files = {"file": (drift_file.name, drift_file.getvalue(), "text/csv")}
+                with st.spinner("Analyzing Population Stability Index (PSI) and Kolmogorov-Smirnov (KS) stats..."):
+                    try:
+                        drift_res = requests.post(f"{API_URL}/monitor/drift", files=files, timeout=30)
+                        drift_res.raise_for_status()
+                        report = drift_res.json()
+                        
+                        overall_drift = report["overall_drift_detected"]
+                        if overall_drift:
+                            st.error("🚨 WARNING: Significant distribution drift detected! Consider retraining the model.")
+                        else:
+                            st.success("🟢 STABLE: No major distribution drift detected. Production data matches training data.")
+                        
+                        # Display feature table
+                        rows = []
+                        for feat, metrics in report.get("feature_metrics", {}).items():
+                            rows.append({
+                                "Feature": feat,
+                                "PSI Score": metrics["psi"],
+                                "KS Stat": metrics["ks_stat"],
+                                "P-Value": metrics["p_value"],
+                                "Drift Detected": "🔴 DRIFT" if metrics["drift_detected"] else "🟢 STABLE"
+                            })
+                        st.dataframe(pd.DataFrame(rows), use_container_width=True)
+                    except Exception as exc:
+                        st.error(f"Drift evaluation request failed: {exc}")
+                        
+        st.markdown("### 📋 Recent Logged Inputs")
+        if 'df_audit' in locals() and not df_audit.empty:
+            st.dataframe(df_audit.head(10)[["timestamp", "tenure", "monthly_charges", "total_charges", "risk_probability", "risk_level", "action_quadrant"]], use_container_width=True)
+        else:
+            st.info("No logs available to view.")

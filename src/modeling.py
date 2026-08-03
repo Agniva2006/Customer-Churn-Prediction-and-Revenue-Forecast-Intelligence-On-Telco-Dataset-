@@ -7,6 +7,8 @@ import numpy as np
 import pandas as pd
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.compose import ColumnTransformer
+from sklearn.ensemble import StackingClassifier, RandomForestClassifier, GradientBoostingClassifier
+from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import StratifiedKFold, cross_val_score, train_test_split
 from sklearn.pipeline import Pipeline
@@ -46,11 +48,25 @@ CATEGORICAL_FEATURES = [
 
 def build_unified_pipeline(params: Optional[Dict[str, Any]] = None) -> Pipeline:
     """Construct an end-to-end scikit-learn Pipeline incorporating cleaning,
-    feature engineering, column preprocessing, and calibrated XGBoost classification.
+    feature engineering, column preprocessing, and calibrated multi-model stacking ensemble classification.
     """
     xgb_params = {**DEFAULT_PARAMS, **(params or {})}
-    base_xgb = XGBClassifier(**xgb_params)
-    calibrated_clf = CalibratedClassifierCV(estimator=base_xgb, method="isotonic", cv=3)
+    
+    # Define base estimators
+    estimators = [
+        ("xgb", XGBClassifier(**xgb_params)),
+        ("rf", RandomForestClassifier(n_estimators=100, random_state=42, max_depth=6)),
+        ("gb", GradientBoostingClassifier(n_estimators=100, random_state=42, max_depth=4))
+    ]
+    
+    # Meta-learner is LogisticRegression
+    stacking_clf = StackingClassifier(
+        estimators=estimators,
+        final_estimator=LogisticRegression(random_state=42),
+        cv=3
+    )
+    
+    calibrated_clf = CalibratedClassifierCV(estimator=stacking_clf, method="isotonic", cv=3)
 
     preprocessor = ColumnTransformer(
         transformers=[
