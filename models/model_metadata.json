@@ -1,0 +1,39 @@
+{
+  "model_version": "3.1.0",
+  "trained_at": "2026-08-07T15:29:05.286831+00:00",
+  "pipeline_type": "CalibratedStackingEnsemble",
+  "base_estimators": [
+    "XGBClassifier",
+    "RandomForestClassifier",
+    "GradientBoostingClassifier"
+  ],
+  "meta_learner": "LogisticRegression",
+  "calibration_method": "isotonic",
+  "dataset": {
+    "source": "WA_Fn-UseC_-Telco-Customer-Churn (1).csv",
+    "total_samples": 7043,
+    "train_samples": 5634,
+    "test_samples": 1409,
+    "churn_rate": 0.2654,
+    "feature_count": 20
+  },
+  "performance": {
+    "cv_roc_auc_scores": [
+      0.8447,
+      0.8328,
+      0.8443,
+      0.8588,
+      0.8606
+    ],
+    "cv_roc_auc_mean": 0.8483,
+    "cv_roc_auc_std": 0.0103,
+    "holdout_test_roc_auc": 0.8446
+  },
+  "business": {
+    "optimal_threshold": 0.1,
+    "max_net_profit_at_threshold": 843700.0,
+    "retention_cost": 500,
+    "save_rate": 0.6,
+    "annual_revenue_assumption": 6000
+  }
+}

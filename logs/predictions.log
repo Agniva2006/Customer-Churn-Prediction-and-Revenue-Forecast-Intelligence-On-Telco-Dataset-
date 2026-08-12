@@ -15,3 +15,22 @@
 2026-07-22 23:24:07,180 | INFO    | Production pipeline model loaded successfully from C:\Users\DELL\Desktop\ntblm\Customer-Churn-Prediction-and-Revenue-Forecast-Intelligence-On-Telco-Dataset-\models\churn_pipeline.pkl
 2026-07-22 23:24:57,972 | INFO    | PREDICT | tenure=12 monthly=75.0 contract=Month-to-month | prob=0.4028 decision=retain action='Targeted Loyalty Campaign & Service Check-in'
 2026-07-22 23:25:11,137 | INFO    | PREDICT | tenure=12 monthly=75.0 contract=Month-to-month | prob=0.4028 decision=retain action='Targeted Loyalty Campaign & Service Check-in'
+2026-08-04 01:54:21,819 | INFO    | Production pipeline model loaded successfully from C:\Users\User\Desktop\best_resume_maker\Customer-Churn-Prediction-and-Revenue-Forecast-Intelligence-On-Telco-Dataset-\models\churn_pipeline.pkl
+2026-08-04 01:54:37,097 | WARNING | SHAP explanation failed (Model type not yet supported by TreeExplainer: <class 'sklearn.ensemble._stacking.StackingClassifier'>), falling back to heuristic.
+2026-08-04 01:54:37,111 | INFO    | PREDICT | tenure=12 monthly=85.5 contract=Month-to-month | prob=0.6854 decision=retain action='VIP Concierge Outreach & High-Value Offer'
+2026-08-07 20:59:31,786 | INFO    | Production pipeline model loaded successfully from C:\Users\User\Desktop\best_resume_maker\Customer-Churn-Prediction-and-Revenue-Forecast-Intelligence-On-Telco-Dataset-\models\churn_pipeline.pkl
+2026-08-07 20:59:31,835 | INFO    | Model metadata loaded from C:\Users\User\Desktop\best_resume_maker\Customer-Churn-Prediction-and-Revenue-Forecast-Intelligence-On-Telco-Dataset-\models\model_metadata.json
+2026-08-07 21:16:45,421 | INFO    | Production pipeline model loaded successfully from C:\Users\User\Desktop\best_resume_maker\Customer-Churn-Prediction-and-Revenue-Forecast-Intelligence-On-Telco-Dataset-\models\churn_pipeline.pkl
+2026-08-07 21:16:45,475 | INFO    | TotalCharges: filled 0 NaNs with median 1397.47
+2026-08-07 21:16:45,480 | INFO    | Model metadata loaded from C:\Users\User\Desktop\best_resume_maker\Customer-Churn-Prediction-and-Revenue-Forecast-Intelligence-On-Telco-Dataset-\models\model_metadata.json
+2026-08-07 21:20:57,211 | WARNING | SHAP explanation failed (Model type not yet supported by TreeExplainer: <class 'sklearn.ensemble._stacking.StackingClassifier'>), falling back to heuristic.
+2026-08-07 21:20:57,223 | INFO    | PREDICT | tenure=12 monthly=75.0 contract=Month-to-month | prob=0.5740 decision=retain action='Targeted Loyalty Campaign & Service Check-in'
+2026-08-07 21:21:17,682 | INFO    | FORECAST_REVENUE | steps=6 order=(1,1,1)
+2026-08-07 21:23:37,318 | WARNING | SHAP explanation failed (Model type not yet supported by TreeExplainer: <class 'sklearn.ensemble._stacking.StackingClassifier'>), falling back to heuristic.
+2026-08-07 21:23:37,335 | INFO    | PREDICT | tenure=12 monthly=75.0 contract=Month-to-month | prob=0.5740 decision=retain action='Targeted Loyalty Campaign & Service Check-in'
+2026-08-07 21:23:53,735 | WARNING | SHAP explanation failed (Model type not yet supported by TreeExplainer: <class 'sklearn.ensemble._stacking.StackingClassifier'>), falling back to heuristic.
+2026-08-07 21:23:53,755 | INFO    | PREDICT | tenure=12 monthly=75.0 contract=Month-to-month | prob=0.5538 decision=retain action='Targeted Loyalty Campaign & Service Check-in'
+2026-08-07 21:31:42,850 | WARNING | SHAP explanation failed (Model type not yet supported by TreeExplainer: <class 'sklearn.ensemble._stacking.StackingClassifier'>), falling back to heuristic.
+2026-08-07 21:31:42,860 | INFO    | PREDICT | tenure=30 monthly=75.0 contract=Month-to-month | prob=0.5237 decision=retain action='Targeted Loyalty Campaign & Service Check-in'
+2026-08-07 21:32:11,923 | INFO    | FORECAST_REVENUE | steps=6 order=(1,1,1)
+2026-08-07 21:32:32,487 | INFO    | MONTE_CARLO | n_customers=7043 avg_rev=6000 churn_mean=0.27 sims=5000 VaR5=27433380

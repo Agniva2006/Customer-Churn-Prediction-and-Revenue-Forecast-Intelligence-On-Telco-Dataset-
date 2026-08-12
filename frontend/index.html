@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChurnGuard AI — Telecom Intelligence Platform</title>
+    <meta name="description" content="Enterprise churn prediction, revenue forecasting, and customer retention intelligence platform powered by AI.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
+</head>
+<body>
+
+<!-- ═══════════ AUTH SCREEN ═══════════ -->
+<div id="auth-screen" class="auth-screen">
+    <div class="auth-bg">
+        <div class="auth-orb auth-orb-1"></div>
+        <div class="auth-orb auth-orb-2"></div>
+        <div class="auth-orb auth-orb-3"></div>
+    </div>
+    <div class="auth-container">
+        <div class="auth-brand">
+            <div class="auth-logo">🛡️</div>
+            <h1>ChurnGuard<span class="text-accent">AI</span></h1>
+            <p class="auth-tagline">Enterprise Telecom Intelligence Platform</p>
+        </div>
+        <div class="auth-card glass-card">
+            <div class="auth-tabs">
+                <button class="auth-tab active" data-tab="login">Sign In</button>
+                <button class="auth-tab" data-tab="register">Create Account</button>
+            </div>
+            <!-- Login Form -->
+            <form id="login-form" class="auth-form">
+                <div class="form-group">
+                    <label for="login-email">Email Address</label>
+                    <input type="email" id="login-email" placeholder="analyst@company.com" required autocomplete="email">
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" placeholder="••••••••" required autocomplete="current-password">
+                </div>
+                <button type="submit" class="btn btn-primary btn-full">
+                    <span class="btn-text">Sign In</span>
+                    <span class="btn-loader hidden"></span>
+                </button>
+                <div id="login-error" class="form-error hidden"></div>
+            </form>
+            <!-- Register Form -->
+            <form id="register-form" class="auth-form hidden">
+                <div class="form-group">
+                    <label for="reg-name">Full Name</label>
+                    <input type="text" id="reg-name" placeholder="Jane Smith" required>
+                </div>
+                <div class="form-group">
+                    <label for="reg-email">Email Address</label>
+                    <input type="email" id="reg-email" placeholder="analyst@company.com" required autocomplete="email">
+                </div>
+                <div class="form-group">
+                    <label for="reg-password">Password</label>
+                    <input type="password" id="reg-password" placeholder="Minimum 6 characters" required minlength="6" autocomplete="new-password">
+                </div>
+                <button type="submit" class="btn btn-primary btn-full">
+                    <span class="btn-text">Create Account</span>
+                    <span class="btn-loader hidden"></span>
+                </button>
+                <div id="register-error" class="form-error hidden"></div>
+            </form>
+        </div>
+        <p class="auth-footer">Powered by Stacking Ensemble ML · SHAP Explainability · ARIMA Forecasting</p>
+    </div>
+</div>
+
+<!-- ═══════════ MAIN APP ═══════════ -->
+<div id="app-screen" class="app-screen hidden">
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar">
+        <div class="sidebar-brand">
+            <span class="sidebar-logo">🛡️</span>
+            <span class="sidebar-title">ChurnGuard<span class="text-accent">AI</span></span>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="#" class="nav-item active" data-page="dashboard">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+                <span>Dashboard</span>
+            </a>
+            <a href="#" class="nav-item" data-page="predict">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10H12V2z"/><path d="M20 12a8 8 0 0 0-8-8v8h8z" opacity=".5"/></svg>
+                <span>Predict Churn</span>
+            </a>
+            <a href="#" class="nav-item" data-page="batch">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                <span>Batch Analytics</span>
+            </a>
+            <a href="#" class="nav-item" data-page="forecast">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                <span>Revenue Forecast</span>
+            </a>
+            <a href="#" class="nav-item" data-page="monitor">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                <span>MLOps Monitor</span>
+            </a>
+            <div class="nav-divider"></div>
+            <a href="#" class="nav-item" data-page="profile">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                <span>Profile</span>
+            </a>
+            <a href="#" class="nav-item" data-page="settings">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+                <span>Settings</span>
+            </a>
+        </nav>
+        <div class="sidebar-user">
+            <div class="user-avatar" id="sidebar-avatar">JS</div>
+            <div class="user-info">
+                <span class="user-name" id="sidebar-name">Jane Smith</span>
+                <span class="user-role" id="sidebar-role">Analyst</span>
+            </div>
+            <button class="btn-icon" id="logout-btn" title="Sign Out">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Top Bar -->
+        <header class="top-bar">
+            <div class="top-bar-left">
+                <button class="btn-icon mobile-menu-btn" id="mobile-menu-toggle">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                </button>
+                <h2 class="page-title" id="page-title">Dashboard</h2>
+            </div>
+            <div class="top-bar-right">
+                <div class="system-status" id="system-status">
+                    <span class="status-dot status-loading"></span>
+                    <span class="status-text">Checking...</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Page Container -->
+        <div class="page-container" id="page-container">
+            <!-- Pages rendered here by JS -->
+        </div>
+    </main>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

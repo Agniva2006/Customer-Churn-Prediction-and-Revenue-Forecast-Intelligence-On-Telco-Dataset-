@@ -1,9 +1,10 @@
-"""Streamlit frontend for the Telecom Churn & Revenue Intelligence API v3.0."""
+"""Streamlit frontend for the Telecom Churn & Revenue Intelligence API v3.1."""
 
 import os
 import streamlit as st
 import requests
 import pandas as pd
+import numpy as np
 
 API_URL = os.getenv("API_URL", "http://127.0.0.1:8000")
 
@@ -64,6 +65,24 @@ st.markdown("""
         color: #e0e7ff;
         margin-top: 1rem;
     }
+    .forecast-card {
+        background: linear-gradient(135deg, #064e3b 0%, #022c22 100%);
+        border: 1px solid #10b981;
+        border-radius: 14px;
+        padding: 1.25rem;
+        color: #d1fae5;
+        text-align: center;
+    }
+    .forecast-card h3 {
+        margin: 0;
+        font-size: 1.8rem;
+        font-weight: 700;
+    }
+    .forecast-card p {
+        margin: 0.3rem 0 0;
+        color: #6ee7b7;
+        font-size: 0.85rem;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -71,7 +90,7 @@ st.markdown("""
 st.markdown("""
 <div class="main-header">
     <h1>📊 Telecom Churn & Revenue Intelligence Platform</h1>
-    <p>Predictive Churn Risk · SHAP Explainability · CLV Action Matrix · Profit Optimization</p>
+    <p>Predictive Churn Risk · SHAP Explainability · CLV Action Matrix · Revenue Forecasting · Profit Optimization</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -86,6 +105,8 @@ with st.sidebar:
                 st.success("🟢 API Online · Model Pipeline Ready")
             else:
                 st.warning("🟡 API Online · Model Pipeline NOT Loaded")
+            if h_json.get("metadata_loaded"):
+                st.caption(f"Version: {h_json.get('version', 'N/A')}")
         else:
             st.error("🔴 API Degraded")
     except Exception:
@@ -101,7 +122,9 @@ with st.sidebar:
 # ── Form Inputs ────────────────────────────────────────────
 st.subheader("👤 Customer Profile Input")
 
-tab_input, tab_batch_ui, tab_mlops = st.tabs(["🔎 Single Prediction", "📁 Batch CSV Analytics", "⚙️ MLOps & Data Drift"])
+tab_input, tab_batch_ui, tab_mlops, tab_forecast = st.tabs([
+    "🔎 Single Prediction", "📁 Batch CSV Analytics", "⚙️ MLOps & Data Drift", "📈 Revenue Forecasting"
+])
 
 with tab_input:
     c1, c2, c3 = st.columns(3)
@@ -128,13 +151,16 @@ with tab_input:
         device = st.selectbox("Device Protection", sec_opts)
         tech = st.selectbox("Tech Support", sec_opts)
 
-    with st.expander("Additional Demographics", expanded=False):
+    with st.expander("Additional Options", expanded=False):
         d1, d2, d3, d4 = st.columns(4)
         gender = d1.selectbox("Gender", ["Female", "Male"])
         senior = d2.selectbox("Senior Citizen", [0, 1])
         partner = d3.selectbox("Partner", ["No", "Yes"])
         dependents = d4.selectbox("Dependents", ["No", "Yes"])
-        paperless = "Yes"
+        e1, e2, e3 = st.columns(3)
+        paperless = e1.selectbox("Paperless Billing", ["Yes", "No"])
+        streaming_tv = e2.selectbox("Streaming TV", ["No", "Yes", "No internet service"])
+        streaming_movies = e3.selectbox("Streaming Movies", ["No", "Yes", "No internet service"])
 
     st.divider()
 
@@ -152,8 +178,8 @@ with tab_input:
             "OnlineBackup": online_backup,
             "DeviceProtection": device,
             "TechSupport": tech,
-            "StreamingTV": "No",
-            "StreamingMovies": "No",
+            "StreamingTV": streaming_tv,
+            "StreamingMovies": streaming_movies,
             "PaperlessBilling": paperless,
             "gender": gender,
             "SeniorCitizen": senior,
@@ -320,3 +346,116 @@ with tab_mlops:
             st.dataframe(df_audit.head(10)[["timestamp", "tenure", "monthly_charges", "total_charges", "risk_probability", "risk_level", "action_quadrant"]], use_container_width=True)
         else:
             st.info("No logs available to view.")
+
+# ── Revenue Forecasting Tab ───────────────────────────────
+with tab_forecast:
+    st.subheader("📈 Revenue Forecasting & Monte Carlo Risk Simulation")
+
+    fc1, fc2 = st.columns(2)
+
+    # ── ARIMA Forecast Section ──
+    with fc1:
+        st.markdown("### 📊 ARIMA Revenue Forecast")
+        st.markdown("Generate time-series revenue projections with confidence intervals using baseline customer data.")
+
+        f_steps = st.slider("Forecast Periods", 1, 12, 6, key="forecast_steps")
+        
+        with st.expander("ARIMA Parameters", expanded=False):
+            fp, fd, fq = st.columns(3)
+            arima_p = fp.number_input("p (AR order)", 0, 5, 1, key="arima_p")
+            arima_d = fd.number_input("d (Differencing)", 0, 2, 1, key="arima_d")
+            arima_q = fq.number_input("q (MA order)", 0, 5, 1, key="arima_q")
+
+        if st.button("📊 Generate Revenue Forecast", type="primary", use_container_width=True, key="run_forecast"):
+            with st.spinner("Computing ARIMA revenue forecast..."):
+                try:
+                    res = requests.post(
+                        f"{API_URL}/forecast/revenue",
+                        params={"steps": f_steps, "order_p": arima_p, "order_d": arima_d, "order_q": arima_q},
+                        timeout=15,
+                    )
+                    res.raise_for_status()
+                    fc_data = res.json()
+
+                    # Historical data
+                    hist_df = pd.DataFrame(fc_data["historical_monthly_revenue"])
+                    forecast_df = pd.DataFrame(fc_data["forecast"])
+
+                    # Summary metrics
+                    fm1, fm2, fm3 = st.columns(3)
+                    fm1.markdown(f'<div class="forecast-card"><h3>{f_steps}</h3><p>Periods Forecasted</p></div>', unsafe_allow_html=True)
+                    fm2.markdown(f'<div class="forecast-card"><h3>₹{forecast_df["predicted_revenue"].mean():,.0f}</h3><p>Avg Forecast Revenue</p></div>', unsafe_allow_html=True)
+                    fm3.markdown(f'<div class="forecast-card"><h3>({arima_p},{arima_d},{arima_q})</h3><p>ARIMA Order</p></div>', unsafe_allow_html=True)
+
+                    # Combined chart
+                    chart_data = pd.DataFrame({
+                        "Period": list(hist_df["month"]) + list(forecast_df["period"]),
+                        "Revenue": list(hist_df["revenue"]) + list(forecast_df["predicted_revenue"]),
+                    })
+                    st.line_chart(chart_data, x="Period", y="Revenue")
+
+                    # Forecast table
+                    st.markdown("#### Forecast Detail")
+                    st.dataframe(forecast_df, use_container_width=True)
+
+                except requests.exceptions.ConnectionError:
+                    st.error("API connection failed. Ensure the backend is running.")
+                except Exception as e:
+                    st.error(f"Forecast failed: {e}")
+
+    # ── Monte Carlo Section ──
+    with fc2:
+        st.markdown("### 🎲 Monte Carlo Revenue Risk Simulation")
+        st.markdown("Quantify revenue exposure under churn uncertainty using stochastic simulation.")
+
+        with st.expander("Simulation Parameters", expanded=True):
+            mc_customers = st.number_input("Customer Base Size", 100, 100000, 7043, step=100, key="mc_customers")
+            mc_revenue = st.number_input("Avg Annual Revenue (₹)", 100.0, 50000.0, 6000.0, step=500.0, key="mc_rev")
+            mc_mean = st.slider("Mean Churn Rate", 0.05, 0.80, 0.27, 0.01, key="mc_mean")
+            mc_std = st.slider("Churn Rate Std Dev", 0.01, 0.20, 0.05, 0.01, key="mc_std")
+            mc_sims = st.select_slider("Simulations", options=[100, 500, 1000, 2000, 5000, 10000], value=5000, key="mc_sims")
+
+        if st.button("🎲 Run Monte Carlo Simulation", type="primary", use_container_width=True, key="run_mc"):
+            with st.spinner("Running Monte Carlo simulations..."):
+                try:
+                    mc_res = requests.get(
+                        f"{API_URL}/forecast/monte-carlo",
+                        params={
+                            "n_customers": mc_customers,
+                            "avg_revenue": mc_revenue,
+                            "churn_rate_mean": mc_mean,
+                            "churn_rate_std": mc_std,
+                            "n_simulations": mc_sims,
+                        },
+                        timeout=15,
+                    )
+                    mc_res.raise_for_status()
+                    mc_data = mc_res.json()
+
+                    results = mc_data["results"]
+
+                    # Key metrics
+                    rm1, rm2 = st.columns(2)
+                    rm1.markdown(f'<div class="forecast-card"><h3>₹{results["mean_revenue"]:,.0f}</h3><p>Mean Simulated Revenue</p></div>', unsafe_allow_html=True)
+                    rm2.markdown(f'<div class="forecast-card"><h3>₹{results["value_at_risk_5pct"]:,.0f}</h3><p>Value-at-Risk (5th pct)</p></div>', unsafe_allow_html=True)
+
+                    # Histogram from API response
+                    bins = mc_data["histogram_bins"]
+                    counts = mc_data["histogram_counts"]
+                    bin_labels = [f"₹{(bins[i]+bins[i+1])/2:,.0f}" for i in range(len(counts))]
+                    hist_chart = pd.DataFrame({"Revenue Bucket": bin_labels, "Frequency": counts})
+                    st.bar_chart(hist_chart, x="Revenue Bucket", y="Frequency")
+
+                    # Percentile table
+                    st.markdown("#### Revenue Distribution Percentiles")
+                    pct = results["percentiles"]
+                    pct_df = pd.DataFrame({
+                        "Percentile": ["5th", "25th", "50th (Median)", "75th", "95th"],
+                        "Revenue (₹)": [f"₹{pct['p5']:,.0f}", f"₹{pct['p25']:,.0f}", f"₹{pct['p50']:,.0f}", f"₹{pct['p75']:,.0f}", f"₹{pct['p95']:,.0f}"],
+                    })
+                    st.dataframe(pct_df, use_container_width=True, hide_index=True)
+
+                except requests.exceptions.ConnectionError:
+                    st.error("API connection failed. Ensure the backend is running.")
+                except Exception as e:
+                    st.error(f"Monte Carlo simulation failed: {e}")

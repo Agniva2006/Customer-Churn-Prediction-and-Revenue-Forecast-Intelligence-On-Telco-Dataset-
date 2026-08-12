@@ -4,7 +4,8 @@ services:
     name: telco-churn-api
     env: python
     buildCommand: pip install -r requirements.txt && python train.py
-    startCommand: uvicorn api:app --host 0.0.0.0 --port $PORT
+    startCommand: gunicorn api:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT
+    healthCheckPath: /health
     plan: free
     envVars:
       - key: PYTHON_VERSION
@@ -20,3 +21,8 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.10.12
+      - key: API_URL
+        fromService:
+          type: web
+          name: telco-churn-api
+          property: host
