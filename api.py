@@ -701,6 +701,7 @@ if os.path.isdir(FRONTEND_DIR):
     app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="frontend_static")
 
 
+@app.get("/")
 @app.get("/app")
 @app.get("/app/{rest_of_path:path}")
 def serve_frontend(rest_of_path: str = ""):

