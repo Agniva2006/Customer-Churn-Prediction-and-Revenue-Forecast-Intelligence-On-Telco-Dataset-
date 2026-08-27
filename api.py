@@ -620,6 +620,79 @@ def auth_logout(authorization: str = Header(None)):
 
 
 # ==============================
+# 0.01% MLSYS: Causal Prescriptive AI & Streaming Architecture
+# ==============================
+from src.causal_engine import causal_engine
+from src.event_streaming import stream_store
+from src.outbox_pattern import outbox_manager
+
+
+class CausalPrescribeRequest(BaseModel):
+    customer_id: str = "CUST_9941"
+    tenure: float = Field(12.0, ge=0)
+    monthly_charges: float = Field(85.0, ge=0)
+    support_calls: int = Field(2, ge=0)
+    is_month_to_month: int = Field(1, ge=0, le=1)
+    clv_estimate: Optional[float] = 850.0
+
+
+class StreamBatchRequest(BaseModel):
+    batch_size: Optional[int] = 1000
+
+
+@app.post("/causal/prescribe")
+def prescribe_retention_action(req: CausalPrescribeRequest, x_idempotency_key: Optional[str] = Header(None)):
+    """Prescribe optimal retention intervention using Double Machine Learning (DML) CATE uplift estimation."""
+    # Enforce distributed idempotency guard
+    if x_idempotency_key:
+        is_new = outbox_manager.check_and_set_idempotency(x_idempotency_key)
+        if not is_new:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Duplicate request detected for idempotency key '{x_idempotency_key}'. Action already recorded."
+            )
+
+    prescription = causal_engine.prescribe_intervention(
+        customer_id=req.customer_id,
+        tenure=req.tenure,
+        monthly_charges=req.monthly_charges,
+        support_calls=req.support_calls,
+        is_month_to_month=req.is_month_to_month,
+        clv_estimate=req.clv_estimate or 850.0,
+    )
+
+    # Atomically record intervention into outbox table
+    outbox_manager.write_transactional_outbox(
+        aggregate_id=req.customer_id,
+        event_type="RETENTION_INTERVENTION_PRESCRIBED",
+        payload=prescription,
+        idempotency_key=x_idempotency_key,
+    )
+
+    return {"status": "SUCCESS", "prescription": prescription}
+
+
+@app.post("/streaming/ingest-batch")
+def ingest_streaming_batch(req: StreamBatchRequest):
+    """Simulate high-throughput Kafka streaming ingestion into RocksDB stateful windows."""
+    size = req.batch_size or 1000
+    res = stream_store.simulate_kafka_batch(batch_size=size)
+    return {"status": "SUCCESS", "streaming_batch": res}
+
+
+@app.get("/streaming/metrics")
+def get_streaming_telemetry():
+    """Return Kafka throughput, stateful sliding window aggregations, and anomaly metrics."""
+    return stream_store.get_metrics()
+
+
+@app.get("/outbox/audit")
+def get_outbox_audit():
+    """Return Transactional Outbox event dispatch status and idempotency deduplication metrics."""
+    return outbox_manager.get_audit_metrics()
+
+
+# ==============================
 # Frontend Serving
 # ==============================
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
