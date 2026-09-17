@@ -7,8 +7,8 @@
 ![License](https://img.shields.io/badge/License-MIT-green)
 
 ---
+<img width="5413" height="5911" alt="diagram_churn_prediction" src="https://github.com/user-attachments/assets/fff463dd-451a-47b5-b4bf-ac8907c242aa" />
 
-<img width="583" height="457" alt="image" src="https://github.com/user-attachments/assets/080c090b-d899-470a-9184-694df9f8956d" />
 
 ## 🏢 Enterprise Overview
 
