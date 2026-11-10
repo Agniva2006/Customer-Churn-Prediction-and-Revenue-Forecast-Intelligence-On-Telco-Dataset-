@@ -1,4 +1,4 @@
-"""Data loading, cleaning, and persistence for the Telco Churn dataset."""
+"""Data loading and cleaning for the Telco Churn dataset."""""
 
 import logging
 import pandas as pd
@@ -51,17 +51,3 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
     df["Churn"] = df["Churn"].str.strip().map({"Yes": 1, "No": 0})
 
     return df
-
-
-def drop_id_column(df: pd.DataFrame) -> pd.DataFrame:
-    """Drop the ``customerID`` column if present."""
-    if "customerID" in df.columns:
-        df = df.drop(columns=["customerID"])
-        logger.info("Dropped customerID column.")
-    return df
-
-
-def save_processed(df: pd.DataFrame, path: str) -> None:
-    """Save a DataFrame to CSV."""
-    df.to_csv(path, index=False)
-    logger.info("Saved processed data to %s (%d rows)", path, len(df))

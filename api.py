@@ -22,12 +22,17 @@ from typing import Any, Dict, List, Optional
 import joblib
 import numpy as np
 import pandas as pd
-from fastapi import FastAPI, File, HTTPException, UploadFile, Query, Request, Header
+from fastapi import FastAPI, File, HTTPException, UploadFile, Query, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 
+from src.config import (
+    DEFAULT_THRESHOLD, RETENTION_COST, SAVE_RATE, DEFAULT_CLV,
+    MC_N_CUSTOMERS, MC_AVG_REVENUE, MC_CHURN_MEAN, MC_CHURN_STD, MC_N_SIMULATIONS,
+    API_VERSION,
+)
 from src.profit_simulation import compute_individualized_profit, monte_carlo_revenue
 from src.explainability import get_top_churn_drivers
 from src.drift import evaluate_batch_drift
@@ -38,6 +43,12 @@ from src.auth import (
     register_user, login_user, get_user_by_token,
     update_profile, update_settings, logout_user
 )
+from src.causal_engine import causal_engine
+from src.causal_engine_v2 import industrial_causal_engine
+from src.ab_testing import CUPEDExperimentEngine, DifferenceInDifferencesEngine, MSPRTExperimentEngine
+from src.feature_store import feature_store
+from src.event_streaming import stream_store
+from src.outbox_pattern import outbox_manager
 
 # ==============================
 # App & CORS Configuration
@@ -45,7 +56,7 @@ from src.auth import (
 app = FastAPI(
     title="Telecom Churn & Revenue Intelligence API",
     description="Enterprise predictive intelligence system delivering churn probabilities, SHAP explainability, CLV retention actions, revenue forecasting, and MLOps drift monitoring.",
-    version="3.1.0",
+    version=API_VERSION,
 )
 
 app.add_middleware(
@@ -129,11 +140,8 @@ def _require_baseline():
 
 
 # ==============================
-# Business Constants
+# Business Constants (from src.config; env-overridable)
 # ==============================
-DEFAULT_THRESHOLD = 0.15
-RETENTION_COST = 500.0
-SAVE_RATE = 0.6
 
 
 # ==============================
@@ -214,7 +222,7 @@ def health():
         "baseline_loaded": baseline_df is not None,
         "metadata_loaded": model_metadata is not None,
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "version": "3.1.0",
+        "version": API_VERSION,
     }
 
 
@@ -477,11 +485,11 @@ def forecast_revenue(
 
 @app.get("/forecast/monte-carlo")
 def forecast_monte_carlo(
-    n_customers: int = Query(7043, ge=100, le=100000, description="Customer base size"),
-    avg_revenue: float = Query(6000.0, ge=100, description="Average annual revenue per customer (₹)"),
-    churn_rate_mean: float = Query(0.27, ge=0.01, le=0.99, description="Mean churn rate"),
-    churn_rate_std: float = Query(0.05, ge=0.001, le=0.3, description="Churn rate standard deviation"),
-    n_simulations: int = Query(5000, ge=100, le=50000, description="Number of Monte Carlo simulations"),
+    n_customers: int = Query(MC_N_CUSTOMERS, ge=100, le=100000, description="Customer base size"),
+    avg_revenue: float = Query(MC_AVG_REVENUE, ge=100, description="Average annual revenue per customer (₹)"),
+    churn_rate_mean: float = Query(MC_CHURN_MEAN, ge=0.01, le=0.99, description="Mean churn rate"),
+    churn_rate_std: float = Query(MC_CHURN_STD, ge=0.001, le=0.3, description="Churn rate standard deviation"),
+    n_simulations: int = Query(MC_N_SIMULATIONS, ge=100, le=50000, description="Number of Monte Carlo simulations"),
 ):
     """Run Monte Carlo simulation to quantify revenue risk under churn uncertainty."""
     try:
@@ -620,15 +628,8 @@ def auth_logout(authorization: str = Header(None)):
 
 
 # ==============================
-# 0.01% MLSYS: Causal Prescriptive AI & Streaming Architecture
+# Causal Prescriptive AI & Streaming (imports moved to top of file)
 # ==============================
-from src.causal_engine import causal_engine
-from src.causal_engine_v2 import industrial_causal_engine
-from src.ab_testing import CUPEDExperimentEngine, DifferenceInDifferencesEngine, MSPRTExperimentEngine
-from src.feature_store import feature_store
-from src.event_streaming import stream_store
-from src.outbox_pattern import outbox_manager
-from fastapi.responses import PlainTextResponse
 
 
 class CausalPrescribeRequest(BaseModel):
@@ -690,7 +691,7 @@ def prescribe_retention_action(req: CausalPrescribeRequest, x_idempotency_key: O
         monthly_charges=req.monthly_charges,
         support_calls=req.support_calls,
         is_month_to_month=req.is_month_to_month,
-        clv_estimate=req.clv_estimate or 850.0,
+        clv_estimate=req.clv_estimate or DEFAULT_CLV,
     )
 
     outbox_manager.write_transactional_outbox(
@@ -721,7 +722,7 @@ def prescribe_retention_action_v2(req: CausalPrescribeRequest, x_idempotency_key
         monthly_charges=req.monthly_charges,
         support_calls=req.support_calls,
         is_month_to_month=req.is_month_to_month,
-        clv_estimate=req.clv_estimate or 850.0,
+        clv_estimate=req.clv_estimate or DEFAULT_CLV,
     )
 
     feature_store.cache_cate_prescription(req.customer_id, prescription, ttl=120)

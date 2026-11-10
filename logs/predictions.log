@@ -34,3 +34,17 @@
 2026-08-07 21:31:42,860 | INFO    | PREDICT | tenure=30 monthly=75.0 contract=Month-to-month | prob=0.5237 decision=retain action='Targeted Loyalty Campaign & Service Check-in'
 2026-08-07 21:32:11,923 | INFO    | FORECAST_REVENUE | steps=6 order=(1,1,1)
 2026-08-07 21:32:32,487 | INFO    | MONTE_CARLO | n_customers=7043 avg_rev=6000 churn_mean=0.27 sims=5000 VaR5=27433380
+2026-11-03 23:54:03,710 | INFO    | Production pipeline model loaded successfully from C:\Users\User\Desktop\best_resume_maker\Customer-Churn-Prediction-and-Revenue-Forecast-Intelligence-On-Telco-Dataset-\models\churn_pipeline.pkl
+2026-11-03 23:54:03,795 | INFO    | TotalCharges: filled 0 NaNs with median 1397.47
+2026-11-03 23:54:03,805 | INFO    | Model metadata loaded from C:\Users\User\Desktop\best_resume_maker\Customer-Churn-Prediction-and-Revenue-Forecast-Intelligence-On-Telco-Dataset-\models\model_metadata.json
+2026-11-03 23:56:53,561 | INFO    | Production pipeline model loaded successfully from C:\Users\User\Desktop\best_resume_maker\Customer-Churn-Prediction-and-Revenue-Forecast-Intelligence-On-Telco-Dataset-\models\churn_pipeline.pkl
+2026-11-03 23:56:53,636 | INFO    | TotalCharges: filled 0 NaNs with median 1397.47
+2026-11-03 23:56:53,645 | INFO    | Model metadata loaded from C:\Users\User\Desktop\best_resume_maker\Customer-Churn-Prediction-and-Revenue-Forecast-Intelligence-On-Telco-Dataset-\models\model_metadata.json
+2026-11-03 23:56:54,074 | INFO    | HTTP Request: GET http://testserver/health "HTTP/1.1 200 OK"
+2026-11-03 23:56:54,355 | INFO    | HTTP Request: POST http://testserver/auth/register "HTTP/1.1 200 OK"
+2026-11-03 23:56:54,602 | INFO    | HTTP Request: POST http://testserver/auth/login "HTTP/1.1 200 OK"
+2026-11-03 23:56:54,623 | INFO    | HTTP Request: GET http://testserver/auth/me "HTTP/1.1 200 OK"
+2026-11-03 23:56:54,891 | INFO    | HTTP Request: POST http://testserver/auth/login "HTTP/1.1 401 Unauthorized"
+2026-11-03 23:56:55,086 | WARNING | SHAP explanation failed (Model type not yet supported by TreeExplainer: <class 'sklearn.ensemble._stacking.StackingClassifier'>), falling back to heuristic.
+2026-11-03 23:56:55,110 | INFO    | PREDICT | tenure=12 monthly=70.5 contract=Month-to-month | prob=0.5779 decision=retain action='Targeted Loyalty Campaign & Service Check-in'
+2026-11-03 23:56:55,117 | INFO    | HTTP Request: POST http://testserver/predict "HTTP/1.1 200 OK"

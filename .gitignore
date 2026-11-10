@@ -27,3 +27,7 @@ data/processed/
 
 # Logs
 logs/
+
+# Test / tooling caches
+.pytest_cache/
+.cache/

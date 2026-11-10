@@ -1,4 +1,4 @@
-# 📊 Telecom Customer Churn & Revenue Forecast Intelligence System (v3.1 Production Edition)
+# 📊 Telecom Customer Churn & Revenue Forecast Intelligence System (v3.2 Production Edition)
 
 ![CI/CD](https://github.com/Agniva2006/Customer-Churn-Prediction-and-Revenue-Forecast-Intelligence-On-Telco-Dataset-/actions/workflows/ci-cd.yml/badge.svg)
 ![Python](https://img.shields.io/badge/Python-3.10-3776AB?logo=python&logoColor=white)
@@ -87,9 +87,14 @@ Rather than optimizing raw machine learning metrics (such as Accuracy or F1-Scor
 | **Revenue Forecasting** | `src/forecasting.py` | ARIMA-based time-series revenue forecasting with confidence intervals. |
 | **Drift Monitoring** | `src/drift.py` | Population Stability Index (PSI) and Kolmogorov-Smirnov (KS) test statistics engine. |
 | **Database Audit** | `src/database.py` | SQLite prediction logging for compliance, monitoring, and audit trail. |
-| **API Backend** | `api.py` | Enterprise FastAPI service with 8 endpoints (see below). |
+| **API Backend** | `api.py` | Enterprise FastAPI service with 20+ endpoints (see below). |
 | **Streamlit UIs** | `streamlit_app.py`, `dashboard/app.py` | API-integrated frontend and standalone offline dashboard. |
 | **Reproducible Training** | `train.py` | CLI training script exporting `models/churn_pipeline.pkl` and `models/model_metadata.json`. |
+| **Configuration** | `src/config.py` | Central env-driven business constants (threshold, retention cost, save rate, auth security). |
+| **Authentication** | `src/auth.py` | Token auth with PBKDF2 password hashing, token expiry, and legacy hash auto-upgrade. |
+| **Causal Engines** | `src/causal_engine.py`, `src/causal_engine_v2.py` | DML/CATE uplift estimation, prescriptive actions, budget-optimal knapsack allocation. |
+| **Experimentation** | `src/ab_testing.py` | CUPED variance reduction, Difference-in-Differences, mSPRT sequential testing. |
+| **Real-Time Infrastructure** | `src/feature_store.py`, `src/event_streaming.py`, `src/outbox_pattern.py` | Redis-backed feature store, Kafka-style streaming metrics, transactional outbox + idempotency. |
 
 ---
 
@@ -106,6 +111,11 @@ Rather than optimizing raw machine learning metrics (such as Accuracy or F1-Scor
 | `GET` | `/monitor/recent` | Retrieve prediction audit log from SQLite database |
 | `POST` | `/forecast/revenue` | ARIMA revenue forecast with confidence intervals |
 | `GET` | `/forecast/monte-carlo` | Monte Carlo revenue risk simulation with VaR metrics |
+| `POST` | `/auth/register` `/auth/login` `/auth/logout` | Token authentication (PBKDF2-hashed credentials) |
+| `GET` | `/auth/me`, `PUT` `/auth/profile` `/auth/settings` | Authenticated profile & settings management |
+| `POST` | `/causal/prescribe` `/causal/prescribe-v2` `/causal/allocate-budget` | DML/CATE uplift prescriptions & budget allocation |
+| `POST` | `/experiment/cuped` `/experiment/did` `/experiment/msprt` | A/B testing & quasi-experiment engines |
+| `GET` | `/feature-store/stats` `/streaming/metrics` `/outbox/audit` `/metrics` | Infrastructure telemetry & Prometheus exposition |
 
 ---
 
@@ -191,6 +201,11 @@ See `.env.example` for all configurable parameters:
 | `API_PORT` | `8000` | FastAPI server port |
 | `DASHBOARD_PORT` | `8501` | Streamlit dashboard port |
 | `DEFAULT_THRESHOLD` | `0.15` | Production classification threshold |
+| `RETENTION_COST` | `500` | Retention offer cost |
+| `SAVE_RATE` | `0.6` | Fraction of churned revenue saved by successful retention |
+| `DEFAULT_CLV` | `850` | Default customer lifetime value for causal engines |
+| `AUTH_TOKEN_TTL_HOURS` | `72` | Session token lifetime |
+| `AUTH_PBKDF2_ITERATIONS` | `200000` | PBKDF2 password hashing iterations |
 
 ---
 
